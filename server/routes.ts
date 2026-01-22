@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -69,13 +70,9 @@ export async function registerRoutes(
   });
 
   // Chunks
-  // Increase payload limit for chunks
-  app.use(api.chunks.upload.path, (req, res, next) => {
-    // Middleware to ensure we can accept large JSON bodies for base64 chunks
-    // Express default is usually small. server/index.ts usually sets this globally, 
-    // but just in case we verify here or rely on global settings.
-    next();
-  });
+  // Increase payload limit for chunks to 50MB
+  app.use(api.chunks.upload.path, express.json({ limit: "50mb" }));
+  app.use(api.chunks.upload.path, express.urlencoded({ limit: "50mb", extended: true }));
 
   app.post(api.chunks.upload.path, async (req, res) => {
     try {
