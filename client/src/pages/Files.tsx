@@ -108,10 +108,24 @@ function DownloadModal({ fileId, open, onOpenChange }: { fileId: string | null, 
         setStatus(`Downloading chunk ${chunk.index + 1}/${file.totalChunks}...`);
         
         // Find an active node to fetch from
-        const nodeId = chunk.nodes[0]; // Naive selection: first replica
-        if (nodeId === undefined) throw new Error(`No available nodes for chunk ${chunk.index}`);
+        let response = null;
+        let lastError = null;
 
-        const response = await fetchChunk(chunk.hash, nodeId);
+        for (const nodeId of chunk.nodes) {
+          try {
+            setStatus(`Downloading chunk ${chunk.index + 1}/${file.totalChunks} (from node ${nodeId})...`);
+            response = await fetchChunk(chunk.hash, nodeId);
+            break; // Found an active node
+          } catch (e: any) {
+            console.warn(`Node ${nodeId} failed for chunk ${chunk.index}:`, e);
+            lastError = e;
+            continue; // Try next replica
+          }
+        }
+
+        if (!response) {
+          throw new Error(`Failed to retrieve chunk ${chunk.index} from any replica. ${lastError?.message || ""}`);
+        }
         
         // Decode Base64 to ArrayBuffer
         const binaryString = atob(response.data);
