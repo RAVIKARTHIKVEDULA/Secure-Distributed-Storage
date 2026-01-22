@@ -1,0 +1,290 @@
+Secure Distributed File Storage with Client-Side Encryption, DHT Coordination, and Advanced Web UI
+
+🎯 Project Objective
+
+Build a web-based secure distributed file storage prototype accessible entirely through a browser.
+Users should be able to upload and download files securely, where all encryption happens client-side, and encrypted file chunks are distributed across logical storage nodes coordinated by a central backend.
+
+This is an academic prototype, not a production decentralized cloud.
+
+🧱 System Architecture (Core Requirements)
+Deployment Model
+
+Frontend deployed as a web application
+
+Users access the system through a browser only
+
+No local setup or code execution required for users
+
+Backend deployed centrally as a coordinator
+
+🔐 Security Model
+
+Client-side encryption using Web Crypto API
+
+Generate a random AES-256-GCM key per file
+
+Encrypt files in the browser before upload
+
+Encrypt AES key using RSA public key (per session)
+
+Use SHA-256 for chunk integrity verification
+
+Backend must never receive plaintext files or private keys
+
+📂 File Processing Pipeline
+
+Encrypt file on client
+
+Split encrypted file into fixed-size chunks
+
+Generate SHA-256 hash per chunk
+
+Use hash as chunk identifier
+
+Distribute chunks across nodes
+
+Replicate each chunk on at least two logical nodes
+
+🌐 Distributed Storage Model
+
+Simulate 3 logical storage nodes
+
+Nodes are logical abstractions, not physical laptops
+
+Encrypted chunks stored in backend-managed storage
+
+Node failure must be simulatable without data loss
+
+🗂 DHT-Like Metadata
+
+Implement a DHT-style mapping:
+
+chunk_hash → [node_id_1, node_id_2]
+
+
+Metadata stored separately from chunks
+
+No centralized plaintext file index
+
+🔄 File Retrieval Flow
+
+User requests file via browser
+
+Backend queries DHT for chunk locations
+
+Encrypted chunks retrieved from nodes
+
+Client verifies hashes (SHA-256)
+
+AES key decrypted client-side
+
+File reconstructed in browser
+
+🧭 Multi-Page UI Flow (Mandatory)
+
+Use client-side routing. Each page must have one clear responsibility.
+
+Required Routes
+/            → Landing Page
+/session     → Local Session Setup
+/upload      → Secure File Upload
+/storage     → Distributed Nodes Dashboard
+/files       → File List & Download
+/architecture→ Architecture & Data Flow
+/logs        → Activity Logs
+
+
+Navigation must not reload the page.
+
+🎨 UI / UX Design Requirements
+Design Language
+
+Modern, professional, security-focused UI
+
+Dark-first theme with optional light mode
+
+Clean typography, consistent spacing
+
+Subtle gradients, soft shadows
+
+Minimalist, calm visual style
+
+Page Responsibilities
+🏠 Landing Page
+
+Project title & short explanation
+
+CTA: Start Secure Session
+
+Secondary CTA: View Architecture
+
+Simple fade-in animation
+
+🔐 Session Page
+
+Local session name input
+
+RSA key generation indicator
+
+Clear note: Keys are stored locally in browser
+
+Button → redirect to Upload page
+
+📤 Upload Page
+
+Drag-and-drop upload zone
+
+Upload button
+
+Data-flow animation triggered here
+
+Visual pipeline:
+
+Encrypt → Chunk → Hash → Distribute
+
+
+On success → redirect to Storage page
+
+🗄 Storage Dashboard
+
+Visual display of 3 logical nodes
+
+Chunk count per node
+
+Node status (Active / Disabled)
+
+Toggle node failure & recovery
+
+Clear explanation text
+
+📁 Files Page
+
+List of uploaded files
+
+Metadata: size, upload time
+
+Download button
+
+Verification & reconstruction animation
+
+Message: File decrypted locally
+
+🧠 Architecture Page
+
+Interactive system diagram
+
+Components:
+
+Client
+
+Encryption Layer
+
+DHT
+
+Storage Nodes
+
+Button to replay data-flow animation
+
+📜 Logs Page
+
+Timestamped logs
+
+Color-coded events
+
+Scrollable, pause-friendly
+
+Logs must sync with animations
+
+🔁 Data Flow Animation (Optimized & Efficient)
+Animation Principles
+
+State-driven (not time-based)
+
+Short (300–800 ms per step)
+
+No looping or distracting effects
+
+UI-only (must not affect logic)
+
+Upload Animation Sequence
+
+File icon appears in browser
+
+Lock icon overlays → Encryption
+
+File splits into chunks with short hashes
+
+Chunks move to DHT panel
+
+Chunks distribute to nodes
+
+Replicated paths shown clearly
+
+Download Animation
+
+Chunks move from nodes → client
+
+Hash verification ticks appear
+
+Lock opens
+
+File reconstructs visually
+
+Node Failure Animation
+
+Disabled node fades / turns red
+
+Chunk path rerouted to replica
+
+Text: Replica used for recovery
+
+🧩 Animation & Routing Rules
+
+Animations are page-scoped
+
+Upload animations only on /upload
+
+Node animations only on /storage
+
+Architecture animations only on /architecture
+
+🛠 Tech Stack Constraints
+
+Frontend: React + Tailwind CSS
+
+Routing: React Router
+
+Animations: Framer Motion
+
+Backend: Node.js / Firebase Functions / Supabase
+
+Crypto: Web Crypto API
+
+❌ Explicit Non-Goals
+
+No blockchain
+
+No cryptocurrency
+
+No real peer-to-peer storage
+
+No physical disk usage from user laptops
+
+No IPFS-level decentralization
+
+🎯 Expected Output
+
+Fully working deployed web app
+
+Smooth multi-page navigation
+
+Clear, explainable animations
+
+Stable demo suitable for viva
+
+Professional UI/UX resembling a product MVP
+
+📎 Mandatory Scope Statement
+
+This project demonstrates secure distributed storage using logical nodes and client-side encryption. Physical peer storage and full decentralization are intentionally excluded to ensure reliability and clarity in an academic setting.
