@@ -115,7 +115,9 @@ function DownloadModal({ fileId, open, onOpenChange }: { fileId: string | null, 
           try {
             setStatus(`Downloading chunk ${chunk.index + 1}/${file.totalChunks} (from node ${nodeId})...`);
             response = await fetchChunk(chunk.hash, nodeId);
-            break; // Found an active node
+            if (response && response.data) {
+              break; // Found an active node with data
+            }
           } catch (e: any) {
             console.warn(`Node ${nodeId} failed for chunk ${chunk.index}:`, e);
             lastError = e;
@@ -123,18 +125,22 @@ function DownloadModal({ fileId, open, onOpenChange }: { fileId: string | null, 
           }
         }
 
-        if (!response) {
-          throw new Error(`Failed to retrieve chunk ${chunk.index} from any replica. ${lastError?.message || ""}`);
+        if (!response || !response.data) {
+          throw new Error(`Failed to retrieve chunk ${chunk.index} from any replica. ${lastError?.message || "Node returned empty data."}`);
         }
         
         // Decode Base64 to ArrayBuffer
-        const binaryString = atob(response.data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          const binaryString = atob(response.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          chunksData[chunk.index] = bytes;
+        } catch (e: any) {
+          console.error(`Decoding failed for chunk ${chunk.index}:`, e);
+          throw new Error(`Failed to decode chunk ${chunk.index}. Data might be corrupted.`);
         }
-        
-        chunksData[chunk.index] = bytes;
         downloadedChunks++;
         setProgress(5 + Math.floor((downloadedChunks / file.totalChunks) * 65));
       }
@@ -152,7 +158,13 @@ function DownloadModal({ fileId, open, onOpenChange }: { fileId: string | null, 
       }
 
       // Decrypt
-      const decryptedBuffer = await decryptFile(encryptedFile.buffer, file.encryptionMetadata as any);
+      let decryptedBuffer;
+      try {
+        decryptedBuffer = await decryptFile(encryptedFile.buffer, file.encryptionMetadata as any);
+      } catch (e: any) {
+        console.error("Decryption failed:", e);
+        throw new Error("Failed to decrypt file. Your session keys might have changed or metadata is corrupted.");
+      }
       
       createLog.mutate({
         level: 'success',
