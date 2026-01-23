@@ -11,9 +11,41 @@ export function useCrypto() {
   // Initialize session on mount
   useEffect(() => {
     const initSession = async () => {
-      // Check if we have keys in memory (simulated per page load for security)
-      // For this demo, we'll generate new keys on refresh to ensure security
       try {
+        // Check for existing keys in localStorage
+        const storedKeys = localStorage.getItem('distributed_storage_session_keys');
+        if (storedKeys) {
+          const { publicKey, privateKey } = JSON.parse(storedKeys);
+          
+          // Import the keys
+          const importedPublic = await window.crypto.subtle.importKey(
+            "spki",
+            new Uint8Array(publicKey).buffer,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["encrypt"]
+          );
+          
+          const importedPrivate = await window.crypto.subtle.importKey(
+            "pkcs8",
+            new Uint8Array(privateKey).buffer,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["decrypt"]
+          );
+          
+          setSessionKeys({ publicKey: importedPublic, privateKey: importedPrivate });
+          
+          // Generate session ID
+          const exported = await window.crypto.subtle.exportKey("spki", importedPublic);
+          const hash = await window.crypto.subtle.digest("SHA-256", exported);
+          const hashArray = Array.from(new Uint8Array(hash));
+          const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          setSessionId(hashHex.substring(0, 8));
+          return;
+        }
+
+        // Generate new keys if none found
         const keyPair = await window.crypto.subtle.generateKey(
           {
             name: "RSA-OAEP",
@@ -27,9 +59,17 @@ export function useCrypto() {
         
         setSessionKeys(keyPair);
         
+        // Export and store keys
+        const exportedPublic = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+        const exportedPrivate = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+        
+        localStorage.setItem('distributed_storage_session_keys', JSON.stringify({
+          publicKey: Array.from(new Uint8Array(exportedPublic)),
+          privateKey: Array.from(new Uint8Array(exportedPrivate))
+        }));
+        
         // Create a short ID from the public key fingerprint
-        const exported = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
-        const hash = await window.crypto.subtle.digest("SHA-256", exported);
+        const hash = await window.crypto.subtle.digest("SHA-256", exportedPublic);
         const hashArray = Array.from(new Uint8Array(hash));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         setSessionId(hashHex.substring(0, 8)); // Short ID
