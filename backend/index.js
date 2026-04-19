@@ -8,6 +8,7 @@ const cors = require("cors");
 const http = require("http");
 const fs = require("fs");
 const crypto = require("crypto");
+const os = require("os");
 
 // ================= APP SETUP =================
 const app = express();
@@ -15,9 +16,10 @@ const PORT = 3000;
 app.use(cors());
 
 // ================= FRIEND STORAGE NODES =================
+// ⚠️  UPDATE THIS: Put your friend's IP here (they get it when they run nodeServer.js)
 const REMOTE_NODES = [
-  { host: "10.117.185.237", port: 4000 },
-  { host: "10.117.185.75", port: 4001 }
+  { host: "10.239.170.159", port: 5000 },
+  { host: "10.239.170.1", port: 4000 }
 ];
 
 // ================= DIRECTORIES =================
@@ -25,7 +27,6 @@ const BASE_DIR = __dirname;
 const UPLOAD_DIR = path.join(BASE_DIR, "uploads");
 const DHT_FILE = path.join(BASE_DIR, "dht.json");
 
-// Ensure uploads directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR);
 }
@@ -79,16 +80,12 @@ function sendChunkToRemoteNode(filePath, filename, node) {
 
     const req = http.request(options, res => {
       let body = "";
-
       res.on("data", chunk => (body += chunk));
-
       res.on("end", () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve();
         } else {
-          reject(
-            new Error(`Remote node error ${res.statusCode}: ${body}`)
-          );
+          reject(new Error(`Remote node error ${res.statusCode}: ${body}`));
         }
       });
     });
@@ -101,9 +98,7 @@ function sendChunkToRemoteNode(filePath, filename, node) {
     req.on("error", reject);
 
     req.write(`--${boundary}\r\n`);
-    req.write(
-      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`
-    );
+    req.write(`Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`);
     req.write("Content-Type: application/octet-stream\r\n\r\n");
     req.write(fileData);
     req.write(`\r\n--${boundary}--\r\n`);
@@ -196,13 +191,11 @@ app.get("/download/:filename", (req, res) => {
 
     remoteRes.on("end", () => {
       const downloadedHash = hash.digest("hex");
-
       if (downloadedHash !== entry.sha256) {
         console.error("Integrity check failed:", filename);
         res.destroy(new Error("Integrity check failed"));
         return;
       }
-
       res.end();
     });
   });
@@ -215,7 +208,24 @@ app.get("/download/:filename", (req, res) => {
   remoteReq.end();
 });
 
+// ================= GET LOCAL IP HELPER =================
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) return iface.address;
+    }
+  }
+  return "localhost";
+}
+
 // ================= SERVER START =================
-app.listen(PORT, () => {
+// Bind to 0.0.0.0 so other machines on the network can reach this server
+app.listen(PORT, "0.0.0.0", () => {
+  const localIP = getLocalIP();
   console.log(`Backend running at http://localhost:${PORT}`);
+  console.log(`Network accessible at: http://${localIP}:${PORT}`);
+  console.log(`\n⚠️  Copy your IP above and paste it into App.jsx as BACKEND_URL`);
+  console.log(`⚠️  Also update REMOTE_NODES with your friend's IP if not done yet\n`);
 });
+
